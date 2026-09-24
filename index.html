@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub Image Uploader - Tải ảnh lên GitHub</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .dragover {
+      border-color: #22c55e !important;
+      background-color: rgba(34, 197, 94, 0.08) !important;
+      transform: scale(1.01);
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-emerald-500 selection:text-white pb-16">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-500/20 font-bold text-xl">
+          <i class="fa-brands fa-github"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
+            Git Image Uploader
+          </h1>
+          <p class="text-xs text-slate-400">Tải & lấy link ảnh từ kho lưu trữ GitHub tức thì</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button id="btnOpenConfig" class="flex items-center space-x-2 px-3 py-2 text-sm rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          <i class="fa-solid fa-gear text-emerald-400"></i>
+          <span>Cấu hình GitHub</span>
+          <span id="configBadge" class="inline-block w-2 h-2 rounded-full bg-rose-500"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 py-8 space-y-8">
+
+    <!-- Config Card (Collapsible) -->
+    <div id="configSection" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden transition-all duration-300">
+      <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-sliders text-emerald-400 text-lg"></i>
+          <h2 class="font-semibold text-base text-slate-100">Cấu hình kết nối GitHub API</h2>
+        </div>
+        <button id="btnCloseConfig" class="text-slate-400 hover:text-slate-200 text-sm">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Token -->
+        <div class="md:col-span-2 lg:col-span-1">
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">
+            GitHub Token (PAT) <span class="text-rose-400">*</span>
+            <a href="https://github.com/settings/tokens" target="_blank" class="text-emerald-400 hover:underline text-[11px] ml-1">
+              (Lấy token <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>)
+            </a>
+          </label>
+          <div class="relative">
+            <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx hoặc github_pat_..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 pr-10 font-mono" />
+            <button type="button" id="toggleToken" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200">
+              <i class="fa-regular fa-eye text-sm"></i>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">Cần quyền <code class="text-slate-400">repo</code> (Classic) hoặc <code class="text-slate-400">Contents: Read & Write</code> (Fine-grained).</p>
+        </div>
+
+        <!-- Repo Owner & Name -->
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">
+            Repository <span class="text-rose-400">*</span> <span class="text-slate-400 text-[11px]">(username/tên-repo)</span>
+          </label>
+          <input type="text" id="ghRepo" placeholder="vidu: yourname/my-images" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono" />
+          <p class="text-[11px] text-slate-500 mt-1">Đảm bảo Repo đã tồn tại trên tài khoản của bạn.</p>
+        </div>
+
+        <!-- Branch -->
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">
+            Branch (Nhánh)
+          </label>
+          <input type="text" id="ghBranch" placeholder="main hoặc master" value="main" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono" />
+          <p class="text-[11px] text-slate-500 mt-1">Mặc định: <code class="text-slate-400">main</code></p>
+        </div>
+
+        <!-- Folder Path -->
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">
+            Thư mục lưu ảnh trong Repo
+          </label>
+          <input type="text" id="ghPath" placeholder="vd: images hoặc uploads/2026" value="images" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono" />
+          <p class="text-[11px] text-slate-500 mt-1">Không cần dấu <code class="text-slate-400">/</code> ở đầu hoặc cuối.</p>
+        </div>
+
+        <!-- Options -->
+        <div class="md:col-span-2 flex flex-col justify-end space-y-2">
+          <label class="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+            <input type="checkbox" id="optAutoTimestamp" checked class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-emerald-500/20" />
+            <span>Thêm timestamp vào tên file (tránh trùng tên / đè ảnh cũ)</span>
+          </label>
+          <label class="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
+            <input type="checkbox" id="optOrganizeDate" class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-emerald-500/20" />
+            <span>Tự gom nhóm thư mục theo Năm/Tháng (<code class="text-slate-400">images/YYYY-MM/</code>)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="mt-5 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div id="connectionStatus" class="text-xs text-slate-400 flex items-center space-x-2">
+          <span>Chưa kiểm tra kết nối</span>
+        </div>
+        <div class="flex items-center space-x-3">
+          <button type="button" id="btnTestConfig" class="px-4 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center space-x-1.5">
+            <i class="fa-solid fa-plug"></i>
+            <span>Kiểm tra kết nối Repo</span>
+          </button>
+          <button type="button" id="btnSaveConfig" class="px-5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition flex items-center space-x-1.5">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>Lưu cấu hình</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Area -->
+    <div class="space-y-4">
+      <!-- Dropzone -->
+      <div id="dropzone" class="border-2 border-dashed border-slate-700 hover:border-emerald-500/70 bg-slate-900/40 rounded-3xl p-10 text-center transition-all duration-200 cursor-pointer group flex flex-col items-center justify-center">
+        <input type="file" id="fileInput" multiple accept="image/*" class="hidden" />
+        
+        <div class="w-16 h-16 rounded-2xl bg-slate-800/80 group-hover:bg-emerald-500/10 border border-slate-700 group-hover:border-emerald-500/40 flex items-center justify-center text-slate-400 group-hover:text-emerald-400 transition mb-4 text-2xl">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+        </div>
+        
+        <h3 class="text-base font-semibold text-slate-200 mb-1">
+          Kéo thả ảnh vào đây, hoặc <span class="text-emerald-400 group-hover:underline">chọn ảnh từ máy tính</span>
+        </h3>
+        <p class="text-xs text-slate-400 max-w-md">
+          Hỗ trợ: PNG, JPG, JPEG, GIF, WEBP, SVG. Bạn cũng có thể nhấn <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[11px] text-slate-300">Ctrl + V</kbd> ở bất kỳ đâu để dán ảnh chụp màn hình trực tiếp.
+        </p>
+      </div>
+
+      <!-- Preview & Queue Container -->
+      <div id="queueSection" class="hidden space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-200 flex items-center space-x-2">
+            <span>Danh sách chờ tải lên</span>
+            <span id="queueCount" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-mono">0</span>
+          </h3>
+          <div class="flex items-center space-x-2">
+            <button id="btnClearQueue" class="text-xs text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg hover:bg-slate-800 transition">
+              <i class="fa-regular fa-trash-can mr-1"></i> Xóa tất cả
+            </button>
+            <button id="btnUploadAll" class="px-5 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-bold shadow-lg shadow-emerald-500/20 transition flex items-center space-x-2">
+              <i class="fa-solid fa-upload"></i>
+              <span>Bắt đầu tải lên Git</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Image Cards Grid -->
+        <div id="previewGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Results / Recent History -->
+    <div id="historySection" class="space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-clock-rotate-left text-teal-400"></i>
+          <h3 class="text-sm font-semibold text-slate-200">Ảnh đã tải lên gần đây</h3>
+          <span id="historyCount" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-xs font-mono">0</span>
+        </div>
+        <button id="btnClearHistory" class="text-xs text-slate-400 hover:text-rose-400 transition">
+          Xóa lịch sử
+        </button>
+      </div>
+
+      <div id="historyList" class="space-y-3">
+        <div id="emptyHistory" class="text-center py-12 text-slate-500 text-xs">
+          <i class="fa-regular fa-images text-3xl mb-2 text-slate-600"></i>
+          <p>Chưa có ảnh nào được tải lên. Hãy tải lên ảnh đầu tiên của bạn!</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <script>
+    // State management
+    const state = {
+      config: {
+        token: '',
+        repo: '',
+        branch: 'main',
+        path: 'images',
+        autoTimestamp: true,
+        organizeDate: false
+      },
+      queue: [],
+      history: []
+    };
+
+    // Load saved settings & history from localStorage
+    function loadSavedData() {
+      const savedConfig = localStorage.getItem('git_img_config');
+      if (savedConfig) {
+        try {
+          state.config = { ...state.config, ...JSON.parse(savedConfig) };
+        } catch (e) {
+          console.error('Error loading config:', e);
+        }
+      }
+
+      const savedHistory = localStorage.getItem('git_img_history');
+      if (savedHistory) {
+        try {
+          state.history = JSON.parse(savedHistory);
+        } catch (e) {
+          console.error('Error loading history:', e);
+        }
+      }
+
+      // Populate input fields
+      document.getElementById('ghToken').value = state.config.token || '';
+      document.getElementById('ghRepo').value = state.config.repo || '';
+      document.getElementById('ghBranch').value = state.config.branch || 'main';
+      document.getElementById('ghPath').value = state.config.path || 'images';
+      document.getElementById('optAutoTimestamp').checked = !!state.config.autoTimestamp;
+      document.getElementById('optOrganizeDate').checked = !!state.config.organizeDate;
+
+      updateConfigBadge();
+      renderHistory();
+    }
+
+    function updateConfigBadge() {
+      const badge = document.getElementById('configBadge');
+      const isConfigured = state.config.token && state.config.repo;
+      if (isConfigured) {
+        badge.className = 'inline-block w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500';
+      } else {
+        badge.className = 'inline-block w-2 h-2 rounded-full bg-rose-500 animate-pulse';
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      
+      const colors = {
+        success: 'bg-emerald-950/90 border-emerald-500/50 text-emerald-200',
+        error: 'bg-rose-950/90 border-rose-500/50 text-rose-200',
+        info: 'bg-slate-900/95 border-slate-700 text-slate-200'
+      };
+
+      const icons = {
+        success: 'fa-solid fa-circle-check text-emerald-400',
+        error: 'fa-solid fa-circle-exclamation text-rose-400',
+        info: 'fa-solid fa-circle-info text-teal-400'
+      };
+
+      toast.className = `pointer-events-auto flex items-center space-x-2.5 px-4 py-3 rounded-xl border shadow-xl text-xs font-medium backdrop-blur transition-all duration-300 transform translate-y-2 opacity-0 ${colors[type] || colors.info}`;
+      toast.innerHTML = `
+        <i class="${icons[type] || icons.info}"></i>
+        <span>${message}</span>
+      `;
+
+      container.appendChild(toast);
+
+      // Animate in
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      // Animate out & remove
+      setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Toggle Config Section
+    const configSection = document.getElementById('configSection');
+    const btnOpenConfig = document.getElementById('btnOpenConfig');
+    const btnCloseConfig = document.getElementById('btnCloseConfig');
+
+    btnOpenConfig.addEventListener('click', () => {
+      configSection.classList.toggle('hidden');
+    });
+    btnCloseConfig.addEventListener('click', () => {
+      configSection.classList.add('hidden');
+    });
+
+    // Toggle Token Visibility
+    const toggleToken = document.getElementById('toggleToken');
+    const ghTokenInput = document.getElementById('ghToken');
+    toggleToken.addEventListener('click', () => {
+      const isPassword = ghTokenInput.type === 'password';
+      ghTokenInput.type = isPassword ? 'text' : 'password';
+      toggleToken.innerHTML = isPassword ? '<i class="fa-regular fa-eye-slash text-sm"></i>' : '<i class="fa-regular fa-eye text-sm"></i>';
+    });
+
+    // Save Config
+    document.getElementById('btnSaveConfig').addEventListener('click', () => {
+      const token = document.getElementById('ghToken').value.trim();
+      let repo = document.getElementById('ghRepo').value.trim();
+      const branch = document.getElementById('ghBranch').value.trim() || 'main';
+      let path = document.getElementById('ghPath').value.trim();
+      const autoTimestamp = document.getElementById('optAutoTimestamp').checked;
+      const organizeDate = document.getElementById('optOrganizeDate').checked;
+
+      // Clean repo path (remove full url if user pasted https://github.com/user/repo)
+      repo = repo.replace(/^https?:\/\/github\.com\//i, '').replace(/\/+$/, '');
+      path = path.replace(/^\/+|\/+$/g, '');
+
+      if (!token || !repo) {
+        showToast('Vui lòng nhập Token và Tên Repository!', 'error');
+        return;
+      }
+
+      state.config = { token, repo, branch, path, autoTimestamp, organizeDate };
+      localStorage.setItem('git_img_config', JSON.stringify(state.config));
+      updateConfigBadge();
+      showToast('Đã lưu cấu hình thành công!', 'success');
+    });
+
+    // Test Config Connection
+    document.getElementById('btnTestConfig').addEventListener('click', async () => {
+      const token = document.getElementById('ghToken').value.trim();
+      let repo = document.getElementById('ghRepo').value.trim().replace(/^https?:\/\/github\.com\//i, '').replace(/\/+$/, '');
+      const branch = document.getElementById('ghBranch').value.trim() || 'main';
+      const statusEl = document.getElementById('connectionStatus');
+
+      if (!token || !repo) {
+        showToast('Vui lòng nhập Token và Repository trước khi kiểm tra!', 'error');
+        return;
+      }
+
+      statusEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-emerald-400"></i> <span>Đang kết nối GitHub...</span>`;
+
+      try {
+        const res = await fetch(`https://api.github.com/repos/${repo}/branches/${branch}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          statusEl.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> <span class="text-emerald-400">Kết nối thành công tới branch <b>${data.name}</b>!</span>`;
+          showToast(`Kết nối thành công tới ${repo} (${branch})`, 'success');
+        } else if (res.status === 401) {
+          statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> <span class="text-rose-400">Token không hợp lệ hoặc đã hết hạn (401).</span>`;
+          showToast('Token không hợp lệ hoặc đã hết hạn!', 'error');
+        } else if (res.status === 404) {
+          statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> <span class="text-rose-400">Không tìm thấy Repo hoặc Branch '${branch}' (404).</span>`;
+          showToast('Không tìm thấy Repo hoặc Branch!', 'error');
+        } else {
+          const errorData = await res.json().catch(() => ({}));
+          statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> <span class="text-rose-400">${errorData.message || 'Lỗi kết nối'}</span>`;
+          showToast(errorData.message || 'Lỗi kiểm tra kết nối', 'error');
+        }
+      } catch (err) {
+        statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-400"></i> <span class="text-rose-400">Lỗi mạng: ${err.message}</span>`;
+        showToast('Lỗi mạng khi kết nối GitHub', 'error');
+      }
+    });
+
+    // File Input & Drag and Drop Handling
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      handleFiles(Array.from(e.target.files));
+      fileInput.value = '';
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('dragover');
+      });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (files.length > 0) {
+        handleFiles(files);
+      } else {
+        showToast('Chỉ hỗ trợ tệp hình ảnh!', 'error');
+      }
+    });
+
+    // Paste image from clipboard
+    window.addEventListener('paste', (e) => {
+      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+      const imageFiles = [];
+      for (let item of items) {
+        if (item.type.indexOf('image') !== -1) {
+          const file = item.getAsFile();
+          if (file) {
+            // Generate a readable name for pasted snippet
+            const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+            const renamedFile = new File([file], `paste_${timestamp}.png`, { type: file.type });
+            imageFiles.push(renamedFile);
+          }
+        }
+      }
+      if (imageFiles.length > 0) {
+        handleFiles(imageFiles);
+        showToast(`Đã nhận ${imageFiles.length} ảnh dán từ clipboard!`, 'info');
+      }
+    });
+
+    // File handling and Queue Management
+    function handleFiles(files) {
+      if (!files || files.length === 0) return;
+
+      files.forEach(file => {
+        const id = 'item_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          state.queue.push({
+            id: id,
+            file: file,
+            name: sanitizeFileName(file.name),
+            preview: e.target.result,
+            size: formatBytes(file.size),
+            status: 'pending', // pending, uploading, success, error
+            progress: 0,
+            errorMsg: ''
+          });
+          renderQueue();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function sanitizeFileName(name) {
+      return name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // remove vietnamese accents
+        .replace(/[^a-zA-Z0-9._-]/g, '_')
+        .replace(/_+/g, '_');
+    }
+
+    function formatBytes(bytes, decimals = 2) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const dm = decimals < 0 ? 0 : decimals;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+
+    // Render Queue
+    function renderQueue() {
+      const queueSection = document.getElementById('queueSection');
+      const previewGrid = document.getElementById('previewGrid');
+      const queueCount = document.getElementById('queueCount');
+
+      queueCount.textContent = state.queue.length;
+
+      if (state.queue.length === 0) {
+        queueSection.classList.add('hidden');
+        previewGrid.innerHTML = '';
+        return;
+      }
+
+      queueSection.classList.remove('hidden');
+      previewGrid.innerHTML = state.queue.map(item => `
+        <div id="${item.id}" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between space-y-3 relative overflow-hidden group">
+          
+          <div class="flex items-start space-x-3">
+            <div class="w-16 h-16 rounded-xl bg-slate-950 border border-slate-800 flex-shrink-0 overflow-hidden flex items-center justify-center relative">
+              <img src="${item.preview}" alt="preview" class="w-full h-full object-cover" />
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <input type="text" value="${item.name}" onchange="updateQueueItemName('${item.id}', this.value)" class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded px-2 py-1 text-xs text-slate-100 font-mono truncate" title="Sửa tên file trước khi tải" />
+              <div class="flex items-center space-x-2 mt-1.5 text-[11px] text-slate-400 font-mono">
+                <span>${item.size}</span>
+                <span>•</span>
+                <span class="status-text">${getStatusBadge(item.status, item.errorMsg)}</span>
+              </div>
+            </div>
+
+            ${item.status === 'pending' ? `
+              <button onclick="removeQueueItem('${item.id}')" class="text-slate-500 hover:text-rose-400 text-xs p-1 transition">
+                <i class="fa-solid fa-xmark text-sm"></i>
+              </button>
+            ` : ''}
+          </div>
+
+          <!-- Progress Bar -->
+          ${item.status === 'uploading' ? `
+            <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div class="bg-emerald-500 h-1.5 rounded-full animate-pulse" style="width: 100%"></div>
+            </div>
+          ` : ''}
+
+        </div>
+      `).join('');
+    }
+
+    function getStatusBadge(status, errorMsg) {
+      switch (status) {
+        case 'pending':
+          return '<span class="text-slate-400">Sẵn sàng</span>';
+        case 'uploading':
+          return '<span class="text-amber-400"><i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang tải...</span>';
+        case 'success':
+          return '<span class="text-emerald-400"><i class="fa-solid fa-check mr-1"></i>Thành công</span>';
+        case 'error':
+          return `<span class="text-rose-400" title="${errorMsg}"><i class="fa-solid fa-circle-exclamation mr-1"></i>Lỗi</span>`;
+        default:
+          return '';
+      }
+    }
+
+    window.updateQueueItemName = (id, newName) => {
+      const item = state.queue.find(q => q.id === id);
+      if (item) {
+        item.name = sanitizeFileName(newName);
+      }
+    };
+
+    window.removeQueueItem = (id) => {
+      state.queue = state.queue.filter(q => q.id !== id);
+      renderQueue();
+    };
+
+    document.getElementById('btnClearQueue').addEventListener('click', () => {
+      state.queue = [];
+      renderQueue();
+    });
+
+    // Base64 helper
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = error => reject(error);
+      });
+    }
+
+    // Upload Execution
+    document.getElementById('btnUploadAll').addEventListener('click', async () => {
+      if (!state.config.token || !state.config.repo) {
+        configSection.classList.remove('hidden');
+        showToast('Vui lòng hoàn tất Cấu hình GitHub trước khi tải lên!', 'error');
+        return;
+      }
+
+      const pendingItems = state.queue.filter(item => item.status === 'pending' || item.status === 'error');
+      if (pendingItems.length === 0) {
+        showToast('Không có ảnh nào cần tải lên!', 'info');
+        return;
+      }
+
+      for (let item of pendingItems) {
+        item.status = 'uploading';
+        renderQueue();
+
+        try {
+          // Construct target file name
+          let fileName = item.name;
+          if (state.config.autoTimestamp) {
+            const extIndex = fileName.lastIndexOf('.');
+            const baseName = extIndex !== -1 ? fileName.substring(0, extIndex) : fileName;
+            const ext = extIndex !== -1 ? fileName.substring(extIndex) : '';
+            const ts = Date.now().toString().slice(-6);
+            fileName = `${baseName}_${ts}${ext}`;
+          }
+
+          // Construct target path
+          let targetPath = state.config.path || '';
+          if (state.config.organizeDate) {
+            const now = new Date();
+            const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            targetPath = targetPath ? `${targetPath}/${yearMonth}` : yearMonth;
+          }
+
+          const fullFilePath = targetPath ? `${targetPath}/${fileName}` : fileName;
+          const base64Content = await fileToBase64(item.file);
+
+          const payload = {
+            message: `Upload ${fileName} via Git Image Uploader`,
+            content: base64Content,
+            branch: state.config.branch || 'main'
+          };
+
+          const uploadUrl = `https://api.github.com/repos/${state.config.repo}/contents/${fullFilePath}`;
+          const res = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${state.config.token}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.message || `Lỗi HTTP ${res.status}`);
+          }
+
+          const resData = await res.json();
+          item.status = 'success';
+
+          // URLs
+          const rawUrl = `https://raw.githubusercontent.com/${state.config.repo}/${state.config.branch}/${fullFilePath}`;
+          const cdnUrl = `https://cdn.jsdelivr.net/gh/${state.config.repo}@${state.config.branch}/${fullFilePath}`;
+          const ghUrl = resData.content?.html_url || `https://github.com/${state.config.repo}/blob/${state.config.branch}/${fullFilePath}`;
+
+          // Add to History
+          const historyEntry = {
+            id: 'hist_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+            fileName: fileName,
+            fullPath: fullFilePath,
+            size: item.size,
+            uploadedAt: new Date().toLocaleString('vi-VN'),
+            rawUrl: rawUrl,
+            cdnUrl: cdnUrl,
+            ghUrl: ghUrl,
+            preview: item.preview
+          };
+
+          state.history.unshift(historyEntry);
+          localStorage.setItem('git_img_history', JSON.stringify(state.history.slice(0, 50))); // Keep last 50
+
+        } catch (err) {
+          console.error(err);
+          item.status = 'error';
+          item.errorMsg = err.message;
+        }
+
+        renderQueue();
+        renderHistory();
+      }
+
+      const allSuccess = state.queue.every(q => q.status === 'success');
+      if (allSuccess) {
+        showToast('Đã tải tất cả ảnh lên GitHub thành công!', 'success');
+        // Clear finished queue after 1.5s
+        setTimeout(() => {
+          state.queue = [];
+          renderQueue();
+        }, 1500);
+      } else {
+        showToast('Một số tệp bị lỗi khi tải lên. Vui lòng kiểm tra lại!', 'error');
+      }
+    });
+
+    // Render History
+    function renderHistory() {
+      const historyList = document.getElementById('historyList');
+      const historyCount = document.getElementById('historyCount');
+      historyCount.textContent = state.history.length;
+
+      if (state.history.length === 0) {
+        historyList.innerHTML = `
+          <div id="emptyHistory" class="text-center py-12 text-slate-500 text-xs">
+            <i class="fa-regular fa-images text-3xl mb-2 text-slate-600 block"></i>
+            <p>Chưa có ảnh nào được tải lên. Hãy tải lên ảnh đầu tiên của bạn!</p>
+          </div>
+        `;
+        return;
+      }
+
+      historyList.innerHTML = state.history.map(item => `
+        <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-4 transition duration-200">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            
+            <!-- Left Info -->
+            <div class="flex items-center space-x-3 min-w-0">
+              <a href="${item.cdnUrl}" target="_blank" class="w-14 h-14 rounded-xl bg-slate-950 border border-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center hover:opacity-80 transition group">
+                <img src="${item.preview || item.cdnUrl}" alt="thumb" class="w-full h-full object-cover" />
+              </a>
+              <div class="min-w-0">
+                <h4 class="text-xs font-semibold text-slate-200 truncate font-mono">${item.fileName}</h4>
+                <p class="text-[11px] text-slate-400 font-mono mt-0.5">${item.fullPath} • ${item.size} • <span class="text-slate-500">${item.uploadedAt}</span></p>
+              </div>
+            </div>
+
+            <!-- Copy Actions -->
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button onclick="copyText('${item.cdnUrl}', 'Đã sao chép link CDN (jsDelivr)')" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-mono transition flex items-center space-x-1.5" title="Link CDN nhanh nhất cho website / blog">
+                <i class="fa-solid fa-bolt text-[11px]"></i>
+                <span>CDN Link</span>
+              </button>
+
+              <button onclick="copyText('![${item.fileName}](${item.cdnUrl})', 'Đã sao chép cú pháp Markdown')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-mono transition flex items-center space-x-1.5" title="Định dạng Markdown ![alt](url)">
+                <i class="fa-brands fa-markdown text-xs"></i>
+                <span>Markdown</span>
+              </button>
+
+              <button onclick="copyText('<img src=&quot;${item.cdnUrl}&quot; alt=&quot;${item.fileName}&quot; />', 'Đã sao chép thẻ HTML')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-mono transition flex items-center space-x-1.5" title="Thẻ HTML <img>">
+                <i class="fa-solid fa-code text-xs"></i>
+                <span>HTML</span>
+              </button>
+
+              <button onclick="copyText('${item.rawUrl}', 'Đã sao chép Raw GitHub URL')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-mono transition" title="Raw GitHub URL">
+                <span>Raw</span>
+              </button>
+
+              <a href="${item.ghUrl}" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition flex items-center" title="Xem trên GitHub">
+                <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+              </a>
+
+              <button onclick="deleteHistoryItem('${item.id}')" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition" title="Xóa khỏi lịch sử">
+                <i class="fa-regular fa-trash-can text-xs"></i>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.copyText = (text, successMsg) => {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(successMsg || 'Đã sao chép!', 'success');
+      }).catch(() => {
+        showToast('Không thể sao chép!', 'error');
+      });
+    };
+
+    window.deleteHistoryItem = (id) => {
+      state.history = state.history.filter(h => h.id !== id);
+      localStorage.setItem('git_img_history', JSON.stringify(state.history));
+      renderHistory();
+      showToast('Đã xóa khỏi lịch sử', 'info');
+    };
+
+    document.getElementById('btnClearHistory').addEventListener('click', () => {
+      if (state.history.length === 0) return;
+      if (confirm('Bạn có chắc muốn xóa toàn bộ lịch sử tải lên đã lưu trong trình duyệt?')) {
+        state.history = [];
+        localStorage.removeItem('git_img_history');
+        renderHistory();
+        showToast('Đã xóa toàn bộ lịch sử', 'info');
+      }
+    });
+
+    // Initialize
+    loadSavedData();
+  </script>
+</body>
+</html>
